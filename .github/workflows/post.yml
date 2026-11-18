@@ -1,0 +1,46 @@
+name: post to instagram
+
+on:
+  schedule:
+    # Bangkok = UTC+7: 07:00, 12:30, 17:00, 19:00 (TUKARIS), 20:00 (+ a late retry for each slot in case GitHub skips one)
+    - cron: "0 0 * * *"
+    - cron: "30 5 * * *"
+    - cron: "0 10 * * *"
+    - cron: "0 13 * * *"
+    - cron: "0 12 * * *"    # 19:00 TUKARIS
+    - cron: "40 1 * * *"
+    - cron: "10 7 * * *"
+    - cron: "10 11 * * *"
+    - cron: "40 14 * * *"
+    - cron: "40 12 * * *"   # 19:40 retry for TUKARIS
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: publish the set that is due
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+        run: python poster.py
+      - name: save posted.log
+        run: |
+          if [ -n "$(git status --porcelain posted.log)" ]; then
+            git config user.name "igpost-bot"
+            git config user.email "igpost-bot@users.noreply.github.com"
+            git add posted.log
+            git commit -m "posted"
+            git push
+          fi
